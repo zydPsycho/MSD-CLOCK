@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSD Clock - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- PWA Support -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3b82f6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MSD Clock">
+<link rel="apple-touch-icon" href="icon-192x192.png">
+
+<!-- Add this at the bottom of your body before closing -->
+<script>
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+            .then((registration) => {
+                console.log('Service Worker registered successfully:', registration);
+            })
+            .catch((error) => {
+                console.log('Service Worker registration failed:', error);
+            });
+    });
+}
+</script>
+</head>
+<body>
+
+<div class="app-layout">
+
+    <aside class="sidebar">
+        <div class="brand">
+            <h1>🕒 MSD Clock</h1>
+            <p>Dashboard Edition</p>
+        </div>
+
+        <nav class="nav-menu">
+            <button class="tab active" data-page="alarmPage">
+                <span class="icon">⏰</span> Alarm
+            </button>
+            <button class="tab" data-page="reminderPage">
+                <span class="icon">📝</span> Reminder
+            </button>
+            <button class="tab" data-page="stopwatchPage">
+                <span class="icon">⏱</span> Stopwatch
+            </button>
+            <button class="tab" data-page="worldPage">
+                <span class="icon">🌍</span> World Clock
+            </button>
+            <button class="tab" data-page="voicePage">
+                <span class="icon">🔊</span> Voice Settings
+            </button>
+            <button class="tab" data-page="settingsPage">
+                <span class="icon">⚙</span> Preferences
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button id="voiceNowBtn" class="action-btn">🔊 Speak Time</button>
+            <button id="themeBtn" class="action-btn">🎨 Toggle Theme</button>
+        </div>
+    </aside>
+
+    <main class="main-panel">
+        
+        <header class="clock-banner">
+            <div class="analog-container">
+                <canvas id="analogClock" width="200" height="200"></canvas>
+            </div>
+            
+            <div class="digital-container">
+                <div class="time-wrapper">
+                    <div id="digitalClock">00:00:00</div>
+                    <div id="ampm">AM</div>
+                </div>
+                <div id="dateText">Loading Date...</div>
+            </div>
+        </header>
+
+        <div class="content-area">
+
+            <section id="alarmPage" class="page active">
+                <div class="grid-layout">
+                    <div class="card form-card">
+                        <h2 id="alarmFormTitle">Set New Alarm</h2>
+                        <label>Select Time (HH:MM:SS)</label>
+                        <input type="text" id="alarmTime" placeholder="HH:MM:SS" maxlength="8">
+                        <input type="hidden" id="editingAlarmId" value="">
+                        <button id="addAlarm" class="primary-btn">Add Alarm</button>
+                        <button id="cancelEditAlarm" class="primary-btn" style="display:none; background-color: #6b7280; margin-top:10px;">Cancel Edit</button>
+                    </div>
+                    <div class="card list-card">
+                        <h2>Your Active Alarms</h2>
+                        <div id="alarmList" class="scroll-list">No alarms added.</div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="reminderPage" class="page">
+                <div class="grid-layout">
+                    <div class="card form-card">
+                        <h2 id="reminderFormTitle">Create Reminder</h2>
+                        <label>What to remember?</label>
+                        <input type="text" id="reminderTitle" placeholder="e.g. Drink Water">
+                        <label>Date & Time</label>
+                        <input type="datetime-local" id="reminderTime" step="1">
+                        <input type="hidden" id="editingReminderId" value="">
+                        <button id="addReminder" class="primary-btn">Add Reminder</button>
+                        <button id="cancelEditReminder" class="primary-btn" style="display:none; background-color: #6b7280; margin-top:10px;">Cancel Edit</button>
+                    </div>
+                    <div class="card list-card">
+                        <h2>Upcoming Reminders</h2>
+                        <div id="reminderList" class="scroll-list">No reminders.</div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="stopwatchPage" class="page">
+                <div class="card center-card">
+                    <h2>Stopwatch</h2>
+                    <div id="stopwatchDisplay">00:00:00.00</div>
+                    <div class="button-group">
+                        <button id="startSW" class="success-btn">Start</button>
+                        <button id="pauseSW" class="warning-btn">Pause</button>
+                        <button id="lapSW" class="info-btn">Lap</button>
+                        <button id="resetSW" class="danger-btn">Reset</button>
+                    </div>
+                    <div class="lap-container">
+                        <h3>Recorded Laps</h3>
+                        <div id="lapList" class="scroll-list">No laps recorded yet.</div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="worldPage" class="page">
+                <h2>International Times</h2>
+                <div id="worldClocks" class="world-grid">
+                    <div class="world-card">
+                        <h3>🇮🇳 India (IST)</h3>
+                        <p id="indiaTime">--</p>
+                    </div>
+                    <div class="world-card">
+                        <h3>🇬🇧 London (GMT)</h3>
+                        <p id="londonTime">--</p>
+                    </div>
+                    <div class="world-card">
+                        <h3>🇺🇸 New York (EST)</h3>
+                        <p id="newYorkTime">--</p>
+                    </div>
+                    <div class="world-card">
+                        <h3>🇯🇵 Tokyo (JST)</h3>
+                        <p id="tokyoTime">--</p>
+                    </div>
+                    <div class="world-card">
+                        <h3>🇦🇪 Dubai (GST)</h3>
+                        <p id="dubaiTime">--</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="voicePage" class="page">
+                <div class="card">
+                    <h2>Voice Assistant Configuration</h2>
+                    
+                    <div class="toggle-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="voiceEnabled" checked>
+                            <span class="slider"></span>
+                            <span class="label-text">Enable Voice Features</span>
+                        </label>
+                        
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="hourlyVoice">
+                            <span class="slider"></span>
+                            <span class="label-text">Hourly Time Announcements</span>
+                        </label>
+                    </div>
+                    
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label>Select Voice Profile</label>
+                            <select id="voiceSelect"><option>Loading voices...</option></select>
+                        </div>
+                        <div class="input-group">
+                            <label>Speech Speed</label>
+                            <input type="range" id="speechRate" min="0.5" max="2" step="0.1" value="1">
+                        </div>
+                        <div class="input-group">
+                            <label>Speech Pitch</label>
+                            <input type="range" id="speechPitch" min="0" max="2" step="0.1" value="1">
+                        </div>
+                    </div>
+                    
+                    <button id="testVoice" class="primary-btn mt-15">Play Test Audio</button>
+                </div>
+            </section>
+
+            <section id="settingsPage" class="page">
+                <div class="card">
+                    <h2>Application Settings</h2>
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label>Clock Display Format</label>
+                            <select id="clockFormat">
+                                <option value="12">12-Hour (AM/PM)</option>
+                                <option value="24">24-Hour (Military)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Language</label>
+                            <select id="langSelect">
+                                <option value="en">English</option>
+                                <option value="ml">Malayalam</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Color Theme</label>
+                            <select id="themeSelect">
+                                <option value="dark">Midnight Dark</option>
+                                <option value="light">Clean Light</option>
+                                <option value="blue">Ocean Blue</option>
+                                <option value="green">Forest Green</option>
+                                <option value="purple">Royal Purple</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button id="saveSettings" class="primary-btn mt-15">Save Preferences</button>
+                </div>
+            </section>
+
+        </div>
+    </main>
+</div>
+
+<div id="notificationModal" class="notification-overlay">
+    <div class="notification-box">
+        <h1 id="notifTitle">Alert!</h1>
+        <p id="notifMessage">Notification Message</p>
+        <button id="dismissNotifBtn" class="danger-btn">Stop & Dismiss</button>
+    </div>
+</div>
+<!-- Add this before closing body -->
+<script>
+// Generate dynamic icons for PWA
+function generateIcons() {
+    const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    sizes.forEach(size => {
+        canvas.width = size;
+        canvas.height = size;
+        
+        // Background
+        const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+        gradient.addColorStop(0, '#3b82f6');
+        gradient.addColorStop(1, '#1e293b');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(size/2, size/2, size/2, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Clock face
+        ctx.beginPath();
+        ctx.arc(size/2, size/2, size * 0.35, 0, 2 * Math.PI);
+        ctx.fillStyle = 'white';
+        ctx.fill();
+        
+        // Clock hands
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = size * 0.03;
+        ctx.lineCap = 'round';
+        
+        // Hour hand
+        ctx.beginPath();
+        ctx.moveTo(size/2, size/2);
+        ctx.lineTo(size/2, size/2 - size * 0.2);
+        ctx.stroke();
+        
+        // Minute hand
+        ctx.beginPath();
+        ctx.moveTo(size/2, size/2);
+        ctx.lineTo(size/2 + size * 0.15, size/2 - size * 0.1);
+        ctx.stroke();
+        
+        // Center dot
+        ctx.beginPath();
+        ctx.arc(size/2, size/2, size * 0.04, 0, 2 * Math.PI);
+        ctx.fillStyle = '#3b82f6';
+        ctx.fill();
+        
+        // Text
+        ctx.fillStyle = 'white';
+        ctx.font = `bold ${size * 0.08}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('MSD', size/2, size * 0.55);
+        
+        // Download icon
+        const link = document.createElement('a');
+        link.download = `icon-${size}x${size}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
+}
+
+// Uncomment to generate icons
+// generateIcons();
+</script>
+
+<script src="script.js"></script>
+</body>
+</html>
